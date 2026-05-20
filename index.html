@@ -681,7 +681,7 @@ function updateParts() {
   selectedParts = [...document.querySelectorAll('.part-chip input:checked')].map(el => el.value);
 }
 async function askAI() {
-  const apiKey = 'AIzaSyAtWVIBKrA3UKv0JvZcanHGehWu3uoqcDc';
+  const apiKey = 'AIzaSyAhr816fm9eSd40d2eGfGNihR1-vTubAJY';
   if (!selectedParts.length) { alert(t('alert_parts')); return; }
   const level = document.getElementById('ai-level').value;
   const time = document.getElementById('ai-time').value;
