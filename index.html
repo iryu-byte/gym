@@ -294,6 +294,17 @@
 <!-- プランタブ -->
 <div id="tab-plan" class="tab">
   <p class="section-label" data-i18n="ai_title"></p>
+  <div class="card" id="apikey-card">
+    <div class="form-row">
+      <span class="form-label">API Key</span>
+      <input type="password" id="api-key-input" placeholder="sk-ant-..." style="font-size:12px;"/>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-secondary" style="flex:1;font-size:11px;" onclick="saveApiKey()" data-i18n="apikey_save"></button>
+      <button class="btn btn-secondary" style="font-size:11px;padding:10px;" onclick="toggleApiKeyVisibility()">👁</button>
+    </div>
+    <div id="apikey-status" style="font-family:'DM Mono',monospace;font-size:11px;margin-top:8px;color:var(--text3);"></div>
+  </div>
   <div class="card">
     <div class="form-row" style="flex-wrap:wrap;gap:6px;margin-bottom:10px;">
       <span class="form-label" style="width:100%;min-width:unset;margin-bottom:4px;" data-i18n="ai_body_parts"></span>
@@ -380,7 +391,7 @@ const i18n = {
     alert_import_ok:'インポート完了！', alert_import_err:'ファイルが正しくありません',
     alert_reset:'本日のログをリセットしますか？',
     btn_export:'↓ エクスポート', btn_import_lbl:'↑ インポート',
-    api_err:'APIエラーが発生しました。',
+    api_err:'APIエラーが発生しました。', apikey_save:'保存', apikey_set:'APIキーが設定されています ✓', apikey_none:'APIキーが未設定です', apikey_saved:'保存しました ✓',
   },
   zh: {
     nav_log:'记录', nav_progress:'进度', nav_calorie:'热量', nav_plan:'计划',
@@ -422,7 +433,7 @@ const i18n = {
     alert_import_ok:'导入成功！', alert_import_err:'文件格式不正确',
     alert_reset:'确定要重置今日记录吗？',
     btn_export:'↓ 导出', btn_import_lbl:'↑ 导入',
-    api_err:'API请求失败，请稍后再试。',
+    api_err:'API请求失败，请稍后再试。', apikey_save:'保存', apikey_set:'API密钥已设置 ✓', apikey_none:'尚未设置API密钥', apikey_saved:'已保存 ✓',
   }
 };
 
@@ -614,11 +625,32 @@ function refreshCalories() {
     </div>`).join('');
 }
 
+// ===== API KEY =====
+function saveApiKey() {
+  const key = document.getElementById('api-key-input').value.trim();
+  if (!key) return;
+  localStorage.setItem('gl_apikey', key);
+  document.getElementById('api-key-input').value = '';
+  updateApiKeyStatus();
+  document.getElementById('apikey-status').textContent = t('apikey_saved');
+}
+function toggleApiKeyVisibility() {
+  const input = document.getElementById('api-key-input');
+  input.type = input.type === 'password' ? 'text' : 'password';
+}
+function updateApiKeyStatus() {
+  const key = localStorage.getItem('gl_apikey');
+  const statusEl = document.getElementById('apikey-status');
+  if (statusEl) statusEl.textContent = key ? t('apikey_set') : t('apikey_none');
+}
+
 // ===== AI PLAN =====
 function updateParts() {
   selectedParts = [...document.querySelectorAll('.part-chip input:checked')].map(el => el.value);
 }
 async function askAI() {
+  const apiKey = localStorage.getItem('gl_apikey');
+  if (!apiKey) { alert(lang==='ja'?'APIキーを設定してください':'请先设置API密钥'); return; }
   if (!selectedParts.length) { alert(t('alert_parts')); return; }
   const level = document.getElementById('ai-level').value;
   const time = document.getElementById('ai-time').value;
@@ -631,7 +663,7 @@ async function askAI() {
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: {'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true'},
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1000,
@@ -704,6 +736,7 @@ function importData(e) {
 // ===== init =====
 document.getElementById('cal-goal-input').value = calGoal;
 applyI18n();
+updateApiKeyStatus();
 if(lang==='zh') { document.querySelectorAll('.lang-btn').forEach(b=>b.classList.toggle('active', b.textContent==='中文')); }
 
 if('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
